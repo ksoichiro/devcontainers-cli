@@ -3,6 +3,7 @@ name: Docker Image CI
 on:
   push:
     tags: [ "v*" ]
+    branches: [ "*" ]
 
 env:
   PYTHON_VERSION: '3.12'
@@ -31,11 +32,15 @@ jobs:
         key: windows
     - name: Get version number
       run: |
-        $tagName = "${{ github.ref }}".Split("/")[2]
-        $tagName = "${{ github.ref }}".Split("/")[2]
-        Write-Host $tagName
-        $upstreamTagName = $tagName.Split("-")[0]
-        Write-Host $upstreamTagName
+        if ("${{ github.ref_type }}" -eq "tag") {
+          $tagName = "${{ github.ref }}" -replace "refs/tags/", ""
+          $upstreamTagName = $tagName.Split("-")[0]
+        } else {
+          $tagName = "dev-${{ github.sha }}"
+          $upstreamTagName = "main"
+        }
+        Write-Host "Tag name: $tagName"
+        Write-Host "Upstream tag name: $upstreamTagName"
         Write-Output "TAG_NAME=$tagName" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
         Write-Output "UPSTREAM_TAG_NAME=$upstreamTagName" | Out-File -Append -Encoding ascii $env:GITHUB_ENV
     - name: Checkout upstream
@@ -62,10 +67,15 @@ jobs:
         key: linux
     - name: Get version number
       run: |
-        TAG_NAME=$(echo "${{ github.ref }}" | cut -d '/' -f 3)
-        echo $TAG_NAME
-        UPSTREAM_TAG_NAME=$(echo ${TAG_NAME} | cut -d '-' -f 1)
-        echo $UPSTREAM_TAG_NAME
+        if [ "${{ github.ref_type }}" = "tag" ]; then
+          TAG_NAME=$(echo "${{ github.ref }}" | sed 's|refs/tags/||')
+          UPSTREAM_TAG_NAME=$(echo ${TAG_NAME} | cut -d '-' -f 1)
+        else
+          TAG_NAME="dev-${{ github.sha }}"
+          UPSTREAM_TAG_NAME="main"
+        fi
+        echo "Tag name: ${TAG_NAME}"
+        echo "Upstream tag name: ${UPSTREAM_TAG_NAME}"
         echo "TAG_NAME=${TAG_NAME}" >> ${GITHUB_ENV}
         echo "UPSTREAM_TAG_NAME=${UPSTREAM_TAG_NAME}" >> ${GITHUB_ENV}
     - name: Checkout upstream
@@ -92,10 +102,15 @@ jobs:
         key: darwin
     - name: Get version number
       run: |
-        TAG_NAME=$(echo "${{ github.ref }}" | cut -d '/' -f 3)
-        echo $TAG_NAME
-        UPSTREAM_TAG_NAME=$(echo ${TAG_NAME} | cut -d '-' -f 1)
-        echo $UPSTREAM_TAG_NAME
+        if [ "${{ github.ref_type }}" = "tag" ]; then
+          TAG_NAME=$(echo "${{ github.ref }}" | sed 's|refs/tags/||')
+          UPSTREAM_TAG_NAME=$(echo ${TAG_NAME} | cut -d '-' -f 1)
+        else
+          TAG_NAME="dev-${{ github.sha }}"
+          UPSTREAM_TAG_NAME="main"
+        fi
+        echo "Tag name: ${TAG_NAME}"
+        echo "Upstream tag name: ${UPSTREAM_TAG_NAME}"
         echo "TAG_NAME=${TAG_NAME}" >> ${GITHUB_ENV}
         echo "UPSTREAM_TAG_NAME=${UPSTREAM_TAG_NAME}" >> ${GITHUB_ENV}
     - name: Checkout upstream
@@ -111,6 +126,8 @@ jobs:
   release:
     needs: [build-linux, build-windows, build-darwin]
     runs-on: ubuntu-latest
+    # This job only runs for tag pushes
+    if: github.ref_type == 'tag'
     steps:
     - name: Download windows artifact
       uses: actions/download-artifact@v4
