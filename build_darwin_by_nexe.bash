@@ -35,5 +35,5 @@ yarn
 yarn compile-prod
 
 # create single executable binary by nexe
-npx -y nexe --loglevel="verbose" -i ./devcontainer.js --make="-j3" -r="scripts/updateUID.Dockerfile" -t ${SUFFIX} -b -c "['--dest-cpu=arm64,x64']" -o ${BIN_PATH}
+npx -y nexe --loglevel="verbose" -i ./devcontainer.js --make="-j3" -r="scripts/updateUID.Dockerfile" -t ${SUFFIX} -b -c "--dest-cpu=arm64,x64" -o ${BIN_PATH}
 
